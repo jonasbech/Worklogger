@@ -4,7 +4,7 @@ import { Calendar } from '../components/Calendar';
 import { NewLogForm } from '../components/NewLogForm';
 import { TagStats } from '../components/TagStats';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { AppState, DayLog, Tag } from '../types';
+import { AppState, DayLog, Tag, DayType } from '../types';
 import { initialState } from '../utils/constants';
 
 export function LoggerView() {
@@ -13,13 +13,14 @@ export function LoggerView() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [editingLog, setEditingLog] = useState<DayLog | null>(null);
 
-  const handleAddLog = (projectId: string, tags: string[], notes: string) => {
+  const handleAddLog = (projectId: string, tags: string[], notes: string, dayType: DayType) => {
     const newLog: DayLog = {
       id: crypto.randomUUID(),
       date: format(selectedDate, 'yyyy-MM-dd'),
       projectId,
       tags,
       notes,
+      dayType,
     };
 
     setState(prev => {

@@ -12,12 +12,15 @@ export interface Tag {
   color: string;
 }
 
+export type DayType = 'full' | 'half';
+
 export interface DayLog {
   id: string;
   date: string;
   projectId: string;
   tags: string[];
   notes?: string;
+  dayType: DayType;
 }
 
 export interface AppState {

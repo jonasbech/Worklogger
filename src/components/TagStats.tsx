@@ -7,10 +7,15 @@ interface TagStatsProps {
 }
 
 export function TagStats({ logs, tags }: TagStatsProps) {
-  const stats = tags.map(tag => ({
-    ...tag,
-    count: logs.filter(log => log.tags.includes(tag.id)).length,
-  }));
+  const stats = tags.map(tag => {
+    const tagLogs = logs.filter(log => log.tags.includes(tag.id));
+    const days = tagLogs.reduce((acc, log) => acc + (log.dayType === 'full' ? 1 : 0.5), 0);
+    
+    return {
+      ...tag,
+      count: days,
+    };
+  });
 
   return (
     <div className="bg-[#1a1a1a] rounded-lg shadow-lg p-6 border border-[#2a2a2a]">
@@ -22,7 +27,7 @@ export function TagStats({ logs, tags }: TagStatsProps) {
             className="p-6 rounded-lg flex flex-col items-center justify-center transition-transform hover:scale-105"
             style={{ backgroundColor: `${color}15` }}
           >
-            <span className="text-5xl font-bold mb-3" style={{ color }}>{count}</span>
+            <span className="text-5xl font-bold mb-3" style={{ color }}>{count.toFixed(1)}</span>
             <span className="text-sm text-gray-400">{name} Days</span>
           </div>
         ))}

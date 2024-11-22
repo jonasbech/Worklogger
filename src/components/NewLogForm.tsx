@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { GripVertical, X, Plus } from 'lucide-react';
-import { DayLog, Project, Tag } from '../types';
+import { GripVertical, X, Plus, Sun, Cloud } from 'lucide-react';
+import { DayLog, Project, Tag, DayType } from '../types';
 import { colorPalette } from '../utils/constants';
 
 interface NewLogFormProps {
@@ -9,7 +9,7 @@ interface NewLogFormProps {
   tags: Tag[];
   selectedDate: Date;
   onDateChange: (date: Date) => void;
-  onAddLog: (projectId: string, tags: string[], notes: string) => void;
+  onAddLog: (projectId: string, tags: string[], notes: string, dayType: DayType) => void;
   onAddProject: (projectNumber: string, productionCompany: string, name: string) => void;
   onAddTag: (name: string, color: string) => void;
   onUpdateTags: (tags: Tag[]) => void;
@@ -32,6 +32,7 @@ export function NewLogForm({
   const [selectedProject, setSelectedProject] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
+  const [dayType, setDayType] = useState<DayType>('full');
   const [draggedTagId, setDraggedTagId] = useState<string | null>(null);
   const [showNewTag, setShowNewTag] = useState(false);
   const [newTagName, setNewTagName] = useState('');
@@ -42,19 +43,22 @@ export function NewLogForm({
       setSelectedProject(editingLog.projectId);
       setSelectedTags(editingLog.tags);
       setNotes(editingLog.notes || '');
+      setDayType(editingLog.dayType);
     } else {
       setSelectedProject('');
       setSelectedTags([]);
       setNotes('');
+      setDayType('full');
     }
   }, [editingLog]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAddLog(selectedProject, selectedTags, notes);
+    onAddLog(selectedProject, selectedTags, notes, dayType);
     setSelectedProject('');
     setSelectedTags([]);
     setNotes('');
+    setDayType('full');
   };
 
   const handleDelete = () => {
@@ -63,6 +67,7 @@ export function NewLogForm({
       setSelectedProject('');
       setSelectedTags([]);
       setNotes('');
+      setDayType('full');
     }
   };
 
@@ -188,6 +193,34 @@ export function NewLogForm({
           </div>
         </div>
 
+        <div className="mb-6">
+          <label className="block text-gray-400 text-sm mb-4">Day Type</label>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => setDayType('full')}
+              className={`flex items-center justify-center p-8 rounded-lg transition-all ${
+                dayType === 'full'
+                  ? 'bg-[#3a3a3a] text-white ring-2 ring-blue-500'
+                  : 'bg-[#1a1a1a] text-gray-400 hover:bg-[#2a2a2a]'
+              }`}
+            >
+              <span className="text-xl font-medium">Full Day</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDayType('half')}
+              className={`flex items-center justify-center p-8 rounded-lg transition-all ${
+                dayType === 'half'
+                  ? 'bg-[#3a3a3a] text-white ring-2 ring-blue-500'
+                  : 'bg-[#1a1a1a] text-gray-400 hover:bg-[#2a2a2a]'
+              }`}
+            >
+              <span className="text-xl font-medium">Half Day</span>
+            </button>
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Notes (Optional)
@@ -199,31 +232,36 @@ export function NewLogForm({
           />
         </div>
 
-        <div className="flex justify-between gap-4">
-          {editingLog ? (
-            <>
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="px-4 py-2 text-red-500 hover:text-red-400 transition-colors"
-              >
-                Delete Log
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-[#3a3a3a] text-white rounded hover:bg-[#4a4a4a] transition-colors"
-              >
-                Update Log
-              </button>
-            </>
-          ) : (
+        <div className="flex justify-end gap-4 mt-6">
+          {editingLog && (
             <button
-              type="submit"
-              className="w-full px-6 py-2 bg-[#3a3a3a] text-white rounded hover:bg-[#4a4a4a] transition-colors"
+              type="button"
+              onClick={handleDelete}
+              className="px-4 py-2 text-red-500 hover:text-red-400 transition-colors"
             >
-              Add Log
+              Delete Log
             </button>
           )}
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            onClick={(e) => {
+              e.preventDefault();
+              if (!selectedProject) {
+                alert('Please select a project');
+                return;
+              }
+              onAddLog(selectedProject, selectedTags, notes, dayType);
+              if (!editingLog) {
+                setSelectedProject('');
+                setSelectedTags([]);
+                setNotes('');
+                setDayType('full');
+              }
+            }}
+          >
+            {editingLog ? 'Update Log' : 'Add Log'}
+          </button>
         </div>
       </form>
 
