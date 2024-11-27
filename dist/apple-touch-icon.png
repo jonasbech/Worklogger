@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+    <path id="Rectangle" fill="#101010" fill-rule="evenodd" stroke="none" d="M -58 1098 L 1154 1098 L 1154 -57 L -58 -57 Z"/>
+    <path id="Path" fill="#ffffff" fill-rule="evenodd" stroke="none" d="M 267 706 C 267 735.823364 291.176636 760 321 760 L 595 760 C 673.321533 678.560547 675.000549 677.751831 759 592 L 759 319 C 759 289.176636 734.823364 265 705 265 L 321 265 C 291.176636 265 267 289.176636 267 319 Z"/>
+    <path id="path1" fill="#000000" fill-rule="evenodd" stroke="#000000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M 568 715 L 715 568 L 568 568 L 568 715 Z"/>
+    <path id="path2" fill="#000000" fill-rule="evenodd" stroke="#000000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M 376 568 L 512 568 L 512 512 L 375 512 L 376 568 Z"/>
+    <path id="path3" fill="#000000" fill-rule="evenodd" stroke="#000000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M 375 402 L 375 456 L 648 456 L 648 404 Z"/>
+</svg>

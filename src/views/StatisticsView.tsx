@@ -4,6 +4,7 @@ import { useFirestore } from '../hooks/useFirestore';
 import { useStatistics } from '../hooks/useStatistics';
 import { TagStats } from '../components/TagStats';
 import { CompanyStats } from '../components/CompanyStats';
+import { ProjectTypeStats } from '../components/ProjectTypeStats';
 
 export function StatisticsView() {
   const { state, loading, error } = useFirestore();
@@ -63,6 +64,9 @@ export function StatisticsView() {
           ))}
         </div>
       </div>
+
+      {/* Project Type Statistics */}
+      <ProjectTypeStats stats={stats.projectTypeStats} />
 
       {/* Project Distribution */}
       <div className="bg-[#1a1a1a] p-6 rounded-lg">

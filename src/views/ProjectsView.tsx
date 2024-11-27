@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, X, ChevronUp, ChevronDown, Building2 } from 'lucide-react';
+import { Plus, X, ChevronUp, ChevronDown, Building2, Receipt, HeartHandshake } from 'lucide-react';
 import { useFirestore } from '../hooks/useFirestore';
 import { INITIAL_PROJECT_NUMBER } from '../utils/constants';
+import { InvoiceStatus } from '../components/InvoiceStatus';
 
 export function ProjectsView() {
   const { state, loading, error, addProject, deleteProject, deleteLog } = useFirestore();
@@ -16,6 +17,7 @@ export function ProjectsView() {
   });
   const [productionCompany, setProductionCompany] = useState('');
   const [projectName, setProjectName] = useState('');
+  const [projectType, setProjectType] = useState<'paid' | 'pro-bono'>('paid');
 
   if (loading) {
     return <div className="text-center text-gray-400">Loading...</div>;
@@ -33,12 +35,15 @@ export function ProjectsView() {
         productionCompany,
         name: projectName,
         createdAt: new Date().toISOString(),
+        isPaid: projectType === 'paid',
+        invoiceSent: false,
       });
 
       setProjectNumber(prev => (parseInt(prev, 10) + 1).toString());
       setShowNewProject(false);
       setProductionCompany('');
       setProjectName('');
+      setProjectType('paid');
     } catch (err) {
       alert('Failed to add project: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
@@ -48,10 +53,8 @@ export function ProjectsView() {
     if (window.confirm('Are you sure you want to delete this project? All associated logs will also be deleted.')) {
       try {
         setIsDeleting(true);
-        // Delete all logs associated with this project
         const projectLogs = state.logs.filter(log => log.projectId === projectId);
         await Promise.all(projectLogs.map(log => deleteLog(log.id)));
-        // Delete the project
         await deleteProject(projectId);
       } catch (err) {
         alert('Failed to delete project: ' + (err instanceof Error ? err.message : 'Unknown error'));
@@ -96,8 +99,6 @@ export function ProjectsView() {
           const projectLogs = state.logs.filter(l => l.projectId === project.id);
           const totalDays = projectLogs
             .reduce((acc, log) => acc + (log.dayType === 'full' ? 1 : 0.5), 0);
-
-          // Get unique tags from project logs
           const uniqueTags = [...new Set(projectLogs.flatMap(log => log.tags))];
 
           return (
@@ -111,6 +112,14 @@ export function ProjectsView() {
                     <span className="shrink-0 text-sm font-medium bg-blue-500 bg-opacity-20 text-blue-400 px-2 py-1 rounded">
                       #{project.projectNumber}
                     </span>
+                    {project.isPaid ? (
+                      <InvoiceStatus projectId={project.id} invoiceSent={project.invoiceSent || false} />
+                    ) : (
+                      <span className="text-sm font-medium bg-purple-500 bg-opacity-20 text-purple-400 px-2 py-1 rounded flex items-center gap-1">
+                        <HeartHandshake className="w-3 h-3" />
+                        Pro Bono
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {uniqueTags.length > 0 && (
@@ -236,6 +245,19 @@ export function ProjectsView() {
                   className={inputClasses}
                   required
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Project Type
+                </label>
+                <select
+                  value={projectType}
+                  onChange={(e) => setProjectType(e.target.value as 'paid' | 'pro-bono')}
+                  className={`${inputClasses} py-2.5`}
+                >
+                  <option value="paid">Paid Project</option>
+                  <option value="pro-bono">Pro Bono</option>
+                </select>
               </div>
               <button
                 type="submit"

@@ -5,6 +5,8 @@ export interface Project {
   productionCompany: string;
   name: string;
   createdAt: string;
+  isPaid: boolean;
+  invoiceSent?: boolean;
 }
 
 export interface Tag {

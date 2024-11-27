@@ -17,6 +17,15 @@ interface CompanyActivity {
   days: number;
 }
 
+interface ProjectTypeStats {
+  paid: {
+    total: number;
+    invoiceSent: number;
+    invoicePending: number;
+  };
+  proBono: number;
+}
+
 interface Statistics {
   totalLogs: number;
   totalProjects: number;
@@ -25,6 +34,7 @@ interface Statistics {
   projectDistribution: ProjectActivity[];
   companyDistribution: CompanyActivity[];
   recentTags: { name: string; count: number }[];
+  projectTypeStats: ProjectTypeStats;
 }
 
 export function useStatistics(state: AppState): Statistics {
@@ -34,7 +44,7 @@ export function useStatistics(state: AppState): Statistics {
     // Calculate total logs
     const totalLogs = logs.length;
 
-    // Calculate active projects (projects with at least one log)
+    // Calculate active projects
     const activeProjects = projects.filter(project => 
       logs.some(log => log.projectId === project.id)
     );
@@ -103,6 +113,19 @@ export function useStatistics(state: AppState): Statistics {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
+    // Calculate project type statistics
+    const projectTypeStats = projects.reduce((acc, project) => ({
+      paid: {
+        total: acc.paid.total + (project.isPaid ? 1 : 0),
+        invoiceSent: acc.paid.invoiceSent + (project.isPaid && project.invoiceSent ? 1 : 0),
+        invoicePending: acc.paid.invoicePending + (project.isPaid && !project.invoiceSent ? 1 : 0),
+      },
+      proBono: acc.proBono + (!project.isPaid ? 1 : 0),
+    }), {
+      paid: { total: 0, invoiceSent: 0, invoicePending: 0 },
+      proBono: 0,
+    });
+
     return {
       totalLogs,
       totalProjects,
@@ -111,6 +134,7 @@ export function useStatistics(state: AppState): Statistics {
       projectDistribution: projectActivity,
       companyDistribution,
       recentTags,
+      projectTypeStats,
     };
   }, [state]);
 }

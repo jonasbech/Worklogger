@@ -133,6 +133,17 @@ export function useFirestore() {
     }
   };
 
+  const updateProject = async (projectId: string, updates: Partial<Omit<Project, 'id' | 'userId'>>) => {
+    if (!auth.currentUser) throw new Error('Not authenticated');
+    
+    try {
+      await updateDoc(doc(db, 'projects', projectId), updates);
+    } catch (err) {
+      console.error('Failed to update project:', err);
+      throw new Error('Failed to update project');
+    }
+  };
+
   const deleteProject = async (projectId: string) => {
     if (!auth.currentUser) throw new Error('Not authenticated');
     
@@ -191,7 +202,6 @@ export function useFirestore() {
     if (!auth.currentUser) throw new Error('Not authenticated');
     
     try {
-      // Validate that the project exists and belongs to the user
       const isValidProject = await validateProject(log.projectId);
       if (!isValidProject) {
         throw new Error('Invalid project selected');
@@ -248,6 +258,7 @@ export function useFirestore() {
     error,
     indexesBuilding,
     addProject,
+    updateProject,
     deleteProject,
     addTag,
     deleteTag,

@@ -15,7 +15,7 @@ function Navigation() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-[#1a1a1a] border-b border-[#2a2a2a] lg:relative lg:border-b-0">
+    <nav className="fixed top-0 left-0 right-0 bg-[#1a1a1a] border-b border-[#2a2a2a] z-50 backdrop-blur-lg backdrop-saturate-150">
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between py-3 lg:py-6">
           <div className="flex items-center gap-4">
@@ -99,7 +99,7 @@ export default function App() {
     <BrowserRouter>
       <div className="min-h-screen bg-[#121212] flex flex-col">
         <Navigation />
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 lg:px-8 mt-16 lg:mt-0">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 lg:px-8 mt-[60px] lg:mt-[88px]">
           <Routes>
             <Route path="/" element={<LoggerView />} />
             <Route path="/projects" element={<ProjectsView />} />
