@@ -35,6 +35,10 @@ export function CompanyStats({ companies }: CompanyStatsProps) {
   const visibleCompanies = isExpanded ? companies : companies.slice(0, DEFAULT_VISIBLE_COMPANIES);
   const hasMoreCompanies = companies.length > DEFAULT_VISIBLE_COMPANIES;
 
+  if (companies.length === 0) {
+    return null;
+  }
+
   return (
     <div className="bg-[#1a1a1a] rounded-lg shadow-lg p-6 border border-[#2a2a2a]">
       <h2 className="text-2xl font-bold text-white text-center mb-8">Production Company Distribution</h2>

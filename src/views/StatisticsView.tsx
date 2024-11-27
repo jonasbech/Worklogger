@@ -1,15 +1,21 @@
 import React from 'react';
 import { format, parseISO } from 'date-fns';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useFirestore } from '../hooks/useFirestore';
 import { useStatistics } from '../hooks/useStatistics';
-import { AppState } from '../types';
-import { initialState } from '../utils/constants';
 import { TagStats } from '../components/TagStats';
 import { CompanyStats } from '../components/CompanyStats';
 
 export function StatisticsView() {
-  const [state] = useLocalStorage<AppState>('film-work-logger', initialState);
+  const { state, loading, error } = useFirestore();
   const stats = useStatistics(state);
+
+  if (loading) {
+    return <div className="text-center text-gray-400">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500">Error: {error}</div>;
+  }
 
   return (
     <div className="space-y-8">

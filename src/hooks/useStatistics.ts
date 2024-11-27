@@ -40,16 +40,22 @@ export function useStatistics(state: AppState): Statistics {
     );
     const totalProjects = activeProjects.length;
 
-    // Calculate project activity
-    const projectActivity = projects.map(project => ({
-      project,
-      logs: logs.filter(log => log.projectId === project.id).length
-    })).sort((a, b) => b.logs - a.logs);
+    // Calculate project activity with half days
+    const projectActivity = projects.map(project => {
+      const projectLogs = logs.filter(log => log.projectId === project.id);
+      const totalDays = projectLogs.reduce((acc, log) => 
+        acc + (log.dayType === 'full' ? 1 : 0.5), 0
+      );
+      return {
+        project,
+        logs: totalDays
+      };
+    }).sort((a, b) => b.logs - a.logs);
 
     // Get most active project
     const mostActiveProject = projectActivity.length > 0 ? projectActivity[0].project : null;
 
-    // Calculate company distribution
+    // Calculate company distribution with half days
     const companyMap = new Map<string, number>();
     logs.forEach(log => {
       const project = projects.find(p => p.id === log.projectId);
@@ -64,24 +70,31 @@ export function useStatistics(state: AppState): Statistics {
       .map(([name, days]) => ({ name, days }))
       .sort((a, b) => b.days - a.days);
 
-    // Calculate weekly activity
+    // Calculate weekly activity with half days
     const today = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Start week on Monday
     const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
     
     const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
-    const weeklyActivity = weekDays.map(day => ({
-      date: format(day, 'yyyy-MM-dd'),
-      logs: logs.filter(log => isSameDay(parseISO(log.date), day)).length
-    }));
+    const weeklyActivity = weekDays.map(day => {
+      const dayLogs = logs.filter(log => isSameDay(parseISO(log.date), day));
+      const totalDays = dayLogs.reduce((acc, log) => 
+        acc + (log.dayType === 'full' ? 1 : 0.5), 0
+      );
+      return {
+        date: format(day, 'yyyy-MM-dd'),
+        logs: totalDays
+      };
+    });
 
-    // Calculate recent tags
+    // Calculate recent tags with half days
     const recentTags = Array.from(
       logs.reduce((acc, log) => {
+        const dayValue = log.dayType === 'full' ? 1 : 0.5;
         log.tags.forEach(tagId => {
           const tag = tags.find(t => t.id === tagId);
           if (tag) {
-            acc.set(tag.name, (acc.get(tag.name) || 0) + (log.dayType === 'full' ? 1 : 0.5));
+            acc.set(tag.name, (acc.get(tag.name) || 0) + dayValue);
           }
         });
         return acc;

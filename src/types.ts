@@ -1,5 +1,6 @@
 export interface Project {
   id: string;
+  userId: string;
   projectNumber: string;
   productionCompany: string;
   name: string;
@@ -8,6 +9,7 @@ export interface Project {
 
 export interface Tag {
   id: string;
+  userId: string;
   name: string;
   color: string;
 }
@@ -16,6 +18,7 @@ export type DayType = 'full' | 'half';
 
 export interface DayLog {
   id: string;
+  userId: string;
   date: string;
   projectId: string;
   tags: string[];

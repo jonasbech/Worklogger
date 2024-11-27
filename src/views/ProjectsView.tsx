@@ -1,33 +1,12 @@
 import React, { useState } from 'react';
-import { format } from 'date-fns';
 import { Plus, X, ChevronUp, ChevronDown, Building2 } from 'lucide-react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
-import { AppState, Project } from '../types';
-import { initialState, INITIAL_PROJECT_NUMBER } from '../utils/constants';
-
-// Function to generate a consistent color for a tag
-const getTagColor = (tag: string) => {
-  const colors = [
-    '#FF6B6B', // Red
-    '#4ECDC4', // Teal
-    '#45B7D1', // Blue
-    '#96CEB4', // Green
-    '#FFEEAD', // Yellow
-    '#D4A5A5', // Pink
-    '#9FA8DA', // Purple
-    '#80DEEA', // Cyan
-    '#FFE082', // Orange
-    '#BCAAA4', // Brown
-  ];
-  
-  // Use the sum of character codes to determine the color index
-  const colorIndex = tag.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-  return colors[colorIndex];
-};
+import { useFirestore } from '../hooks/useFirestore';
+import { INITIAL_PROJECT_NUMBER } from '../utils/constants';
 
 export function ProjectsView() {
-  const [state, setState] = useLocalStorage<AppState>('film-work-logger', initialState);
+  const { state, loading, error, addProject, deleteProject, deleteLog } = useFirestore();
   const [showNewProject, setShowNewProject] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [projectNumber, setProjectNumber] = useState(() => {
     const maxNumber = Math.max(
       parseInt(INITIAL_PROJECT_NUMBER, 10) - 1,
@@ -38,34 +17,47 @@ export function ProjectsView() {
   const [productionCompany, setProductionCompany] = useState('');
   const [projectName, setProjectName] = useState('');
 
-  const handleAddProject = (e: React.FormEvent) => {
+  if (loading) {
+    return <div className="text-center text-gray-400">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500">Error: {error}</div>;
+  }
+
+  const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newProject: Project = {
-      id: crypto.randomUUID(),
-      projectNumber,
-      productionCompany,
-      name: projectName,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      await addProject({
+        projectNumber,
+        productionCompany,
+        name: projectName,
+        createdAt: new Date().toISOString(),
+      });
 
-    setState(prev => ({
-      ...prev,
-      projects: [newProject, ...prev.projects],
-    }));
-
-    setProjectNumber(prev => (parseInt(prev, 10) + 1).toString());
-    setShowNewProject(false);
-    setProductionCompany('');
-    setProjectName('');
+      setProjectNumber(prev => (parseInt(prev, 10) + 1).toString());
+      setShowNewProject(false);
+      setProductionCompany('');
+      setProjectName('');
+    } catch (err) {
+      alert('Failed to add project: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
   };
 
-  const handleDeleteProject = (projectId: string) => {
+  const handleDeleteProject = async (projectId: string) => {
     if (window.confirm('Are you sure you want to delete this project? All associated logs will also be deleted.')) {
-      setState(prev => ({
-        ...prev,
-        projects: prev.projects.filter(p => p.id !== projectId),
-        logs: prev.logs.filter(l => l.projectId !== projectId),
-      }));
+      try {
+        setIsDeleting(true);
+        // Delete all logs associated with this project
+        const projectLogs = state.logs.filter(log => log.projectId === projectId);
+        await Promise.all(projectLogs.map(log => deleteLog(log.id)));
+        // Delete the project
+        await deleteProject(projectId);
+      } catch (err) {
+        alert('Failed to delete project: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -91,7 +83,8 @@ export function ProjectsView() {
         </div>
         <button
           onClick={() => setShowNewProject(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          disabled={isDeleting}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="w-5 h-5" />
           <span>New Project</span>
@@ -146,7 +139,8 @@ export function ProjectsView() {
                     )}
                     <button
                       onClick={() => handleDeleteProject(project.id)}
-                      className="text-gray-500 hover:text-red-500 transition-colors ml-2"
+                      disabled={isDeleting}
+                      className="text-gray-500 hover:text-red-500 transition-colors ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <X className="w-5 h-5" />
                     </button>

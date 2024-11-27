@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { GripVertical, X, Plus, Sun, Cloud } from 'lucide-react';
+import { GripVertical, X, Plus } from 'lucide-react';
 import { DayLog, Project, Tag, DayType } from '../types';
 import { colorPalette } from '../utils/constants';
 
@@ -33,10 +33,12 @@ export function NewLogForm({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [dayType, setDayType] = useState<DayType>('full');
-  const [draggedTagId, setDraggedTagId] = useState<string | null>(null);
   const [showNewTag, setShowNewTag] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState(colorPalette[0]);
+  const [draggedTagIndex, setDraggedTagIndex] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (editingLog) {
@@ -52,31 +54,68 @@ export function NewLogForm({
     }
   }, [editingLog]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onAddLog(selectedProject, selectedTags, notes, dayType);
-    setSelectedProject('');
-    setSelectedTags([]);
-    setNotes('');
-    setDayType('full');
+    
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      if (!selectedProject) {
+        alert('Please select a project');
+        return;
+      }
+
+      await onAddLog(selectedProject, selectedTags, notes, dayType);
+      
+      if (!editingLog) {
+        setSelectedProject('');
+        setSelectedTags([]);
+        setNotes('');
+        setDayType('full');
+      }
+    } catch (error) {
+      console.error('Error submitting log:', error);
+      alert('Failed to save log. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDelete = () => {
-    if (editingLog) {
-      onDeleteLog(editingLog.id);
+  const handleDelete = async () => {
+    if (!editingLog || isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      await onDeleteLog(editingLog.id);
       setSelectedProject('');
       setSelectedTags([]);
       setNotes('');
       setDayType('full');
+    } catch (error) {
+      console.error('Error deleting log:', error);
+      alert('Failed to delete log. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleAddTag = (e: React.FormEvent) => {
+  const handleAddTag = async (e: React.FormEvent) => {
     e.preventDefault();
-    onAddTag(newTagName, newTagColor);
-    setNewTagName('');
-    setNewTagColor(colorPalette[0]);
-    setShowNewTag(false);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      await onAddTag(newTagName, newTagColor);
+      setNewTagName('');
+      setNewTagColor(colorPalette[0]);
+      setShowNewTag(false);
+    } catch (error) {
+      console.error('Error adding tag:', error);
+      alert('Failed to add tag. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const toggleTag = (tagId: string) => {
@@ -87,22 +126,63 @@ export function NewLogForm({
     );
   };
 
-  const handleDragStart = (tagId: string) => {
-    setDraggedTagId(tagId);
+  // Touch event handlers for tag reordering
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    setDraggedTagIndex(index);
+    setTouchStartY(e.touches[0].clientY);
+    e.currentTarget.style.opacity = '0.5';
   };
 
-  const handleDragOver = (e: React.DragEvent, targetTagId: string) => {
+  const handleTouchMove = (e: React.TouchEvent, index: number) => {
     e.preventDefault();
-    if (!draggedTagId || draggedTagId === targetTagId) return;
+    if (draggedTagIndex === null || touchStartY === null) return;
 
-    const updatedTags = [...tags];
-    const draggedIndex = tags.findIndex(t => t.id === draggedTagId);
-    const targetIndex = tags.findIndex(t => t.id === targetTagId);
+    const touchY = e.touches[0].clientY;
+    const deltaY = touchY - touchStartY;
 
-    const [draggedTag] = updatedTags.splice(draggedIndex, 1);
-    updatedTags.splice(targetIndex, 0, draggedTag);
+    // Only reorder if moved more than 10px
+    if (Math.abs(deltaY) > 10) {
+      const newTags = [...tags];
+      const draggedTag = newTags[draggedTagIndex];
+      newTags.splice(draggedTagIndex, 1);
+      newTags.splice(index, 0, draggedTag);
+      onUpdateTags(newTags);
+      setDraggedTagIndex(index);
+      setTouchStartY(touchY);
+    }
+  };
 
-    onUpdateTags(updatedTags);
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.currentTarget) {
+      e.currentTarget.style.opacity = '1';
+    }
+    setDraggedTagIndex(null);
+    setTouchStartY(null);
+  };
+
+  // Mouse event handlers for desktop drag-and-drop
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedTagIndex(index);
+    e.currentTarget.classList.add('opacity-50');
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedTagIndex === null || draggedTagIndex === index) return;
+
+    const newTags = [...tags];
+    const draggedTag = newTags[draggedTagIndex];
+    newTags.splice(draggedTagIndex, 1);
+    newTags.splice(index, 0, draggedTag);
+
+    onUpdateTags(newTags);
+    setDraggedTagIndex(index);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('opacity-50');
+    setDraggedTagIndex(null);
   };
 
   const inputClasses = "w-full rounded border-[#2a2a2a] bg-[#242424] text-gray-300 focus:border-[#3a3a3a] focus:ring-[#3a3a3a] px-3 py-2";
@@ -154,17 +234,21 @@ export function NewLogForm({
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {tags.map(tag => (
+            {tags.map((tag, index) => (
               <div
                 key={tag.id}
                 draggable
-                onDragStart={() => handleDragStart(tag.id)}
-                onDragOver={(e) => handleDragOver(e, tag.id)}
-                className="group flex items-center gap-1"
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+                onTouchStart={(e) => handleTouchStart(e, index)}
+                onTouchMove={(e) => handleTouchMove(e, index)}
+                onTouchEnd={handleTouchEnd}
+                className="group flex items-center gap-1 touch-none"
               >
                 <div
                   onClick={() => toggleTag(tag.id)}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors flex items-center gap-2 cursor-pointer ${
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors flex items-center gap-2 ${
                     selectedTags.includes(tag.id)
                       ? 'text-white'
                       : 'text-gray-400 hover:text-white'
@@ -175,7 +259,7 @@ export function NewLogForm({
                       : `${tag.color}33`
                   }}
                 >
-                  <GripVertical className="w-3 h-3 opacity-50 cursor-grab" />
+                  <GripVertical className="w-3 h-3 opacity-50" />
                   {tag.name}
                   <button
                     type="button"
@@ -237,36 +321,24 @@ export function NewLogForm({
             <button
               type="button"
               onClick={handleDelete}
-              className="px-4 py-2 text-red-500 hover:text-red-400 transition-colors"
+              disabled={isSubmitting}
+              className="px-4 py-2 text-red-500 hover:text-red-400 transition-colors disabled:opacity-50"
             >
-              Delete Log
+              {isSubmitting ? 'Deleting...' : 'Delete Log'}
             </button>
           )}
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-            onClick={(e) => {
-              e.preventDefault();
-              if (!selectedProject) {
-                alert('Please select a project');
-                return;
-              }
-              onAddLog(selectedProject, selectedTags, notes, dayType);
-              if (!editingLog) {
-                setSelectedProject('');
-                setSelectedTags([]);
-                setNotes('');
-                setDayType('full');
-              }
-            }}
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {editingLog ? 'Update Log' : 'Add Log'}
+            {isSubmitting ? 'Saving...' : (editingLog ? 'Update Log' : 'Add Log')}
           </button>
         </div>
       </form>
 
       {showNewTag && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-[#1a1a1a] rounded-lg p-6 max-w-sm w-full border border-[#2a2a2a]">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-white">Add New Tag</h3>
@@ -310,9 +382,10 @@ export function NewLogForm({
               </div>
               <button
                 type="submit"
-                className="w-full px-4 py-2 bg-[#3a3a3a] text-white rounded hover:bg-[#4a4a4a] transition-colors"
+                disabled={isSubmitting}
+                className="w-full px-4 py-2 bg-[#3a3a3a] text-white rounded hover:bg-[#4a4a4a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add Tag
+                {isSubmitting ? 'Adding...' : 'Add Tag'}
               </button>
             </form>
           </div>

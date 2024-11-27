@@ -3,61 +3,68 @@ import { format, isSameDay } from 'date-fns';
 import { Calendar } from '../components/Calendar';
 import { NewLogForm } from '../components/NewLogForm';
 import { TagStats } from '../components/TagStats';
-import { useLocalStorage } from '../hooks/useLocalStorage';
-import { AppState, DayLog, Tag, DayType } from '../types';
-import { initialState } from '../utils/constants';
+import { useFirestore } from '../hooks/useFirestore';
+import { DayLog, DayType, Tag } from '../types';
 
 export function LoggerView() {
-  const [state, setState] = useLocalStorage<AppState>('film-work-logger', initialState);
+  const { state, loading, error, indexesBuilding, addLog, updateLog, deleteLog, addTag, deleteTag, addProject, updateTags } = useFirestore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [editingLog, setEditingLog] = useState<DayLog | null>(null);
 
-  const handleAddLog = (projectId: string, tags: string[], notes: string, dayType: DayType) => {
-    const newLog: DayLog = {
-      id: crypto.randomUUID(),
-      date: format(selectedDate, 'yyyy-MM-dd'),
-      projectId,
-      tags,
-      notes,
-      dayType,
-    };
+  if (loading) {
+    return <div className="text-center text-gray-400">Loading...</div>;
+  }
 
-    setState(prev => {
-      const existingLogs = prev.logs.filter(log => 
-        isSameDay(new Date(log.date), selectedDate)
-      );
+  if (indexesBuilding) {
+    return (
+      <div className="text-center text-gray-400">
+        <p>Setting up the database...</p>
+        <p className="text-sm mt-2">This may take a few minutes. Please wait.</p>
+      </div>
+    );
+  }
 
-      // If editing, remove the edited log from the count
-      const logsCount = editingLog 
-        ? existingLogs.filter(log => log.id !== editingLog.id).length 
-        : existingLogs.length;
+  if (error) {
+    return <div className="text-center text-red-500">Error: {error}</div>;
+  }
 
-      // Only allow adding if there are less than 2 logs for the day
-      if (logsCount >= 2) {
-        alert('Maximum of 2 logs per day allowed');
-        return prev;
-      }
+  // Rest of the component remains the same...
+  const handleAddLog = async (projectId: string, tags: string[], notes: string, dayType: DayType) => {
+    const existingLogs = state.logs.filter(log => 
+      isSameDay(new Date(log.date), selectedDate)
+    );
 
-      return {
-        ...prev,
-        logs: [
-          ...prev.logs.filter(log => 
-            !isSameDay(new Date(log.date), selectedDate) || 
-            (editingLog && log.id === editingLog.id)
-          ),
-          newLog
-        ],
-      };
-    });
+    const logsCount = editingLog 
+      ? existingLogs.filter(log => log.id !== editingLog.id).length 
+      : existingLogs.length;
+
+    if (logsCount >= 2) {
+      alert('Maximum of 2 logs per day allowed');
+      return;
+    }
+
+    if (editingLog) {
+      await updateLog(editingLog.id, {
+        projectId,
+        tags,
+        notes,
+        dayType,
+      });
+    } else {
+      await addLog({
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        projectId,
+        tags,
+        notes,
+        dayType,
+      });
+    }
     setEditingLog(null);
   };
 
-  const handleDeleteLog = (logId: string) => {
-    setState(prev => ({
-      ...prev,
-      logs: prev.logs.filter(log => log.id !== logId),
-    }));
+  const handleDeleteLog = async (logId: string) => {
+    await deleteLog(logId);
     setEditingLog(null);
   };
 
@@ -66,34 +73,24 @@ export function LoggerView() {
     setEditingLog(log);
   };
 
-  const handleUpdateTags = (updatedTags: Tag[]) => {
-    setState(prev => ({
-      ...prev,
-      tags: updatedTags,
-    }));
-  };
-
-  const handleDeleteTag = (tagId: string) => {
-    setState(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag.id !== tagId),
-      logs: prev.logs.map(log => ({
-        ...log,
-        tags: log.tags.filter(t => t !== tagId),
-      })),
-    }));
-  };
-
-  const handleAddTag = (name: string, color: string) => {
-    const newTag = {
-      id: crypto.randomUUID(),
+  const handleAddTag = async (name: string, color: string) => {
+    await addTag({
       name,
       color,
-    };
-    setState(prev => ({
-      ...prev,
-      tags: [...prev.tags, newTag],
-    }));
+    });
+  };
+
+  const handleUpdateTags = async (updatedTags: Tag[]) => {
+    await updateTags(updatedTags);
+  };
+
+  const handleAddProject = async (projectNumber: string, productionCompany: string, name: string) => {
+    await addProject({
+      projectNumber,
+      productionCompany,
+      name,
+      createdAt: new Date().toISOString(),
+    });
   };
 
   return (
@@ -103,22 +100,10 @@ export function LoggerView() {
           projects={state.projects}
           tags={state.tags}
           onAddLog={handleAddLog}
-          onAddProject={(projectNumber, productionCompany, name) => {
-            const newProject = {
-              id: crypto.randomUUID(),
-              projectNumber,
-              productionCompany,
-              name,
-              createdAt: new Date().toISOString(),
-            };
-            setState(prev => ({
-              ...prev,
-              projects: [newProject, ...prev.projects],
-            }));
-          }}
+          onAddProject={handleAddProject}
           onAddTag={handleAddTag}
           onUpdateTags={handleUpdateTags}
-          onDeleteTag={handleDeleteTag}
+          onDeleteTag={deleteTag}
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
           editingLog={editingLog}

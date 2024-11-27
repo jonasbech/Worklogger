@@ -15,11 +15,11 @@ export function TagStats({ logs, tags }: TagStatsProps) {
       ...tag,
       count: days,
     };
-  });
+  }).sort((a, b) => b.count - a.count);
 
   return (
     <div className="bg-[#1a1a1a] rounded-lg shadow-lg p-6 border border-[#2a2a2a]">
-      <h2 className="text-2xl font-bold text-white text-center mb-8">Statistics</h2>
+      <h2 className="text-2xl font-bold text-white text-center mb-8">Tag Statistics</h2>
       <div className="grid grid-cols-2 gap-6">
         {stats.map(({ id, name, color, count }) => (
           <div

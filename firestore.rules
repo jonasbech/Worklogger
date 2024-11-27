@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isValidProject(projectId) {
+      let project = get(/databases/$(database)/documents/projects/$(projectId));
+      return project != null && project.data.userId == request.auth.uid;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && isOwner(userId);
+    }
+
+    // Projects collection
+    match /projects/{projectId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+
+    // Tags collection
+    match /tags/{tagId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+
+    // Logs collection
+    match /logs/{logId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid && 
+        isValidProject(request.resource.data.projectId);
+      allow update, delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+  }
+}
